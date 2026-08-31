@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminafila Web App</title>
+    <!-- Firebase App (compat mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --orange: #f97316;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.3s;
+        }
+        header.client-header {
+            background-color: var(--orange);
+        }
+        .sub-header {
+            background-color: var(--orange);
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: background-color 0.3s;
+        }
+        /* Classe per rendere la sottobahar blu in modalità master */
+        .sub-header.master-sub {
+            background-color: var(--secondary);
+        }
+        .container {
+            flex: 1;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: background-color 0.2s;
+        }
+        .number-display {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+        .label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+        }
+        .btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        #logo-crepes {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            margin: 0 auto 15px auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .flashing {
+            animation: pulse-flash 0.8s infinite alternate;
+        }
+        @keyframes pulse-flash {
+            0% { background-color: var(--bg); }
+            100% { background-color: #ef4444; }
+        }
+        
+        body.flashing #logo-crepes {
+            opacity: 0;
+        }
+        body.flashing .card {
+            background-color: transparent;
+            box-shadow: none;
+        }
+
+        .hidden { display: none !important; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="header-title">Gestione Code</header>
+    <div id="sub-header-title" class="sub-header hidden">STAND CREPES</div>
+
+    <div class="container">
+        <!-- SELEZIONE RUOLO -->
+        <div id="view-selector" class="card">
+            <h2>Seleziona Modalità</h2>
+            <p>Come desideri aprire questa pagina?</p>
+            <button class="btn" onclick="setRole('master')">Modalità Master (Sportello)</button>
+            <button class="btn" style="background-color: var(--success); margin-top: 10px;" onclick="setRole('client')">Modalità Cliente (Utente)</button>
+        </div>
+
+        <!-- SCHERMATA MASTER -->
+        <div id="view-master" class="card hidden">
+            <div class="label">Numero Attuale in Servizio</div>
+            <div class="number-display" id="master-current">0</div>
+            
+            <div class="label" style="margin-top: 15px;">Persone in Attesa</div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--secondary);" id="master-waiting">0</div>
+
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="updateMaster(-1)">- Ticket</button>
+                <button class="btn btn-success" onclick="updateMaster(1)">+ Ticket</button>
+            </div>
+
+            <hr style="margin: 20px 0; border:0; border-top:1px solid #e2e8f0;">
+            
+            <div class="label">Impostazione Rapida</div>
+            <input type="number" id="custom-number" placeholder="Inserisci numero...">
+            <button class="btn" onclick="setCustomNumber()">Imposta Numero</button>
+            <button class="btn btn-danger" onclick="resetQueue()" style="margin-top: 10px; background-color: #64748b;">Azzera Contatore</button>
+        </div>
+
+        <!-- SCHERMATA CLIENTE -->
+        <div id="view-client" class="card hidden">
+            <img src="logo.png" id="logo-crepes" alt="Logo Crepes">
+
+            <!-- Numero Attuale Chiamato (Più piccolo) -->
+            <div class="label">Numero Attuale Chiamato</div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--primary); margin: 5px 0;" id="client-called">0</div>
+
+            <hr style="margin: 20px 0; border:0; border-top:1px solid #e2e8f0;">
+
+            <!-- Il Tuo Numeretto (Più grande) -->
+            <div class="label">Il Tuo Numeretto</div>
+            <div class="number-display" style="transition: all 0.3s;" id="client-myticket">-</div>
+            
+            <div id="missed-turn-msg" class="hidden" style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">Attenzione, turno passato.</div>
+
+            <div class="label" style="margin-top: 10px;" id="label-people-ahead">Numeri prima di me</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: #d97706;" id="client-people-ahead">-</div>
+
+            <!-- TASTO PER PRENDERE IL TICKET -->
+            <div id="no-ticket-section" style="margin-top: 15px;">
+                <button class="btn btn-success" onclick="takeTicket()" style="font-size: 1.1rem; padding: 12px;">PRENDI IL NUMERETTO</button>
+            </div>
+
+            <!-- SEZIONE ATTIVA QUANDO È IL SUO TURNO -->
+            <div id="turn-action-section" class="hidden" style="margin-top: 15px;">
+                <p style="color: #facc15; font-weight: bold; font-size: 1.8rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">È IL TUO TURNO!</p>
+                <button class="btn btn-success" onclick="confirmArrival()">Conferma Arrivo</button>
+            </div>
+
+            <!-- PULSANTE ABBANDONA ATTESA -->
+            <div style="margin-top: 15px;">
+                <button class="btn btn-danger" onclick="abandonQueue()" style="background-color: #64748b; font-size: 0.9rem; padding: 8px;">Abbandona Attesa / Cancella</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://mioeliminafila-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        let currentRole = null;
+        let myTicket = localStorage.getItem('my_ticket') ? parseInt(localStorage.getItem('my_ticket')) : null;
+        let alertInterval = null;
+        let lastKnownCurrent = 0;
+
+        function setRole(role) {
+            currentRole = role;
+            document.getElementById('view-selector').classList.add('hidden');
+            const headerEl = document.getElementById('header-title');
+            const subHeaderEl = document.getElementById('sub-header-title');
+
+            subHeaderEl.classList.remove('hidden'); // Mostra la barra STAND CREPES in entrambi i casi
+
+            if (role === 'master') {
+                document.getElementById('view-master').classList.remove('hidden');
+                headerEl.innerText = "Gestione Code - MASTER";
+                headerEl.classList.remove('client-header');
+                subHeaderEl.classList.add('master-sub'); // Sfondo blu per Master
+                initMasterListeners();
+            } else {
+                document.getElementById('view-client').classList.remove('hidden');
+                headerEl.innerText = "Gestione Code - CLIENTE";
+                headerEl.classList.add('client-header');
+                subHeaderEl.classList.remove('master-sub'); // Sfondo arancione per Cliente
+                initClientView();
+            }
+        }
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const role = urlParams.get('role');
+            if (role === 'master' || role === 'client') {
+                setRole(role);
+            }
+        };
+
+        function updateMaster(change) {
+            db.ref('queue/current').transaction(current => {
+                let val = (current || 0) + change;
+                return val < 0 ? 0 : val;
+            });
+        }
+
+        function setCustomNumber() {
+            let val = parseInt(document.getElementById('custom-number').value);
+            if (!isNaN(val) && val >= 0) {
+                db.ref('queue/current').set(val);
+                document.getElementById('custom-number').value = '';
+            }
+        }
+
+        function resetQueue() {
+            if(confirm("Vuoi azzerare il contatore e l'ultimo ticket emesso?")) {
+                db.ref('queue/current').set(0);
+                db.ref('queue/lastTicket').set(0);
+                localStorage.removeItem('my_ticket');
+                location.reload();
+            }
+        }
+
+        function initMasterListeners() {
+            db.ref('queue').on('value', snapshot => {
+                const data = snapshot.val() || { current: 0, lastTicket: 0 };
+                let current = data.current || 0;
+                let lastTicket = data.lastTicket || 0;
+
+                const elCurrent = document.getElementById('master-current');
+                if(elCurrent) elCurrent.innerText = current;
+
+                let waiting = Math.max(0, lastTicket - current);
+                const elWaiting = document.getElementById('master-waiting');
+                if(elWaiting) elWaiting.innerText = waiting;
+            });
+        }
+
+        function initClientView() {
+            updateClientUI(lastKnownCurrent);
+
+            db.ref('queue').on('value', snapshot => {
+                const data = snapshot.val() || { current: 0, lastTicket: 0 };
+                lastKnownCurrent = data.current || 0;
+
+                const elCalled = document.getElementById('client-called');
+                if (elCalled) elCalled.innerText = lastKnownCurrent;
+
+                updateClientUI(lastKnownCurrent);
+
+                if (myTicket !== null && Number(lastKnownCurrent) === Number(myTicket)) {
+                    document.body.classList.add('flashing');
+                    document.getElementById('turn-action-section').classList.remove('hidden');
+
+                    if (!alertInterval) {
+                        startPersistentAlert();
+                    }
+                } else {
+                    document.body.classList.remove('flashing');
+                    document.getElementById('turn-action-section').classList.add('hidden');
+                    stopPersistentAlert();
+                }
+            });
+        }
+
+        function startPersistentAlert() {
+            triggerDrinnn();
+            alertInterval = setInterval(() => {
+                triggerDrinnn();
+            }, 1500);
+        }
+
+        function stopPersistentAlert() {
+            if (alertInterval) {
+                clearInterval(alertInterval);
+                alertInterval = null;
+            }
+        }
+
+        function triggerDrinnn() {
+            if ("vibrate" in navigator) {
+                try {
+                    navigator.vibrate([300, 100, 300, 100, 300, 100]);
+                } catch (e) {}
+            }
+
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    let delay = 0;
+                    for (let i = 0; i < 5; i++) {
+                        playTone(ctx, 1800, delay, 0.08);
+                        playTone(ctx, 2200, delay + 0.08, 0.08);
+                        delay += 0.16;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function playTone(ctx, frequency, startTime, duration) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.value = frequency;
+            
+            gain.gain.setValueAtTime(0.2, ctx.currentTime + startTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start(ctx.currentTime + startTime);
+            osc.stop(ctx.currentTime + startTime + duration);
+        }
+
+        function updateClientUI(currentVal) {
+            const ticketDisplay = document.getElementById('client-myticket');
+            const noTicketSection = document.getElementById('no-ticket-section');
+            const aheadDisplay = document.getElementById('client-people-ahead');
+            const labelAhead = document.getElementById('label-people-ahead');
+            const missedMsg = document.getElementById('missed-turn-msg');
+
+            if (myTicket !== null && !isNaN(myTicket)) {
+                ticketDisplay.innerText = myTicket;
+                noTicketSection.classList.add('hidden');
+
+                if (myTicket < currentVal) {
+                    ticketDisplay.style.backgroundColor = "#facc15";
+                    ticketDisplay.style.color = "var(--primary)";
+                    ticketDisplay.style.padding = "10px";
+                    ticketDisplay.style.borderRadius = "8px";
+                    missedMsg.classList.remove('hidden');
+                    labelAhead.classList.add('hidden');
+                    aheadDisplay.classList.add('hidden');
+                } else {
+                    ticketDisplay.style.backgroundColor = "transparent";
+                    ticketDisplay.style.color = "var(--secondary)";
+                    ticketDisplay.style.padding = "0";
+                    ticketDisplay.style.borderRadius = "0";
+                    missedMsg.classList.add('hidden');
+                    labelAhead.classList.remove('hidden');
+                    aheadDisplay.classList.remove('hidden');
+
+                    let ahead = myTicket - currentVal;
+                    aheadDisplay.innerText = ahead >= 0 ? ahead : 0;
+                }
+            } else {
+                ticketDisplay.innerText = "-";
+                ticketDisplay.style.backgroundColor = "transparent";
+                ticketDisplay.style.color = "var(--secondary)";
+                ticketDisplay.style.padding = "0";
+                ticketDisplay.style.borderRadius = "0";
+                noTicketSection.classList.remove('hidden');
+                missedMsg.classList.add('hidden');
+                labelAhead.classList.remove('hidden');
+                aheadDisplay.innerText = "-";
+                aheadDisplay.classList.remove('hidden');
+            }
+        }
+
+        function takeTicket() {
+            const btn = document.querySelector('#no-ticket-section button');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerText = "Attendere...";
+            }
+
+            const queueRef = db.ref('queue');
+            queueRef.transaction(data => {
+                if (!data) {
+                    data = { current: 0, lastTicket: 0 };
+                }
+
+                let current = data.current || 0;
+                let last = data.lastTicket || 0;
+                let nextTicket = Math.max(current + 1, last + 1);
+
+                data.lastTicket = nextTicket;
+                return data;
+            }, (error, committed, snapshot) => {
+                if (committed) {
+                    myTicket = snapshot.child('lastTicket').val();
+                    localStorage.setItem('my_ticket', myTicket);
+                    updateClientUI(lastKnownCurrent);
+                    stopPersistentAlert();
+                } else {
+                    if(btn) {
+                        btn.disabled = false;
+                        btn.innerText = "PRENDI IL NUMERETTO";
+                    }
+                }
+            });
+        }
+
+        function confirmArrival() {
+            stopPersistentAlert();
+            alert("Hai confermato la chiamata! Avvicinati allo sportello.");
+            localStorage.removeItem('my_ticket');
+            myTicket = null;
+            location.reload();
+        }
+
+        function abandonQueue() {
+            if (myTicket === null || confirm("Sei sicuro di voler abbandonare il turno?")) {
+                if (myTicket !== null) {
+                    db.ref('queue').transaction(data => {
+                        if (data && data.lastTicket > 0) {
+                            data.lastTicket -= 1;
+                            if (data.lastTicket < data.current) {
+                                data.lastTicket = data.current;
+                            }
+                        }
+                        return data;
+                    }, () => {
+                        finalizeAbandon();
+                    });
+                } else {
+                    finalizeAbandon();
+                }
+            }
+        }
+
+        function finalizeAbandon() {
+            stopPersistentAlert();
+            localStorage.removeItem('my_ticket');
+            myTicket = null;
+            location.reload();
+        }
+    </script>
+</body>
+</html>
