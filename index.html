@@ -177,7 +177,6 @@
     <div id="sub-header-title" class="sub-header hidden"></div>
 
     <div class="container">
-        <!-- SELETTORE INIZIALE -->
         <div id="view-selector" class="card hidden">
             <h2>Seleziona Modalità</h2>
             <p>Scegli il ruolo di accesso:</p>
@@ -189,7 +188,6 @@
             <button class="btn" style="background-color: var(--orange); font-size: 0.9rem; padding: 10px; margin-top: 5px;" onclick="goToUrl('master', 'crepes')">Master Sportello Crepes</button>
         </div>
 
-        <!-- VISTA MASTER -->
         <div id="view-master" class="card hidden" style="cursor: default;">
             <div class="label">Numero Attuale in Servizio</div>
             <div class="number-display" id="master-current">0</div>
@@ -208,7 +206,6 @@
             <button class="btn btn-danger" onclick="resetQueue()" style="margin-top: 10px; background-color: #64748b;">Azzera Contatore</button>
         </div>
 
-        <!-- VISTA CLIENTE HUB (Generata Dinamicamente) -->
         <div id="view-client-hub" class="hidden" style="width: 100%;"></div>
     </div>
 
@@ -255,7 +252,7 @@
             const conf = standsConfig[currentStand];
             subHeader.innerHTML = `
                 <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
-                <span class="version-tag">v-23</span>
+                <span class="version-tag">v-25</span>
             `;
             subHeader.className = `sub-header master-${currentStand}`;
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -294,7 +291,7 @@
             subHeader.classList.remove('hidden');
             subHeader.innerHTML = `
                 <span>AREA CLIENTE - SELEZIONE CODE</span>
-                <span class="version-tag">v-23</span>
+                <span class="version-tag">v-25</span>
             `;
             subHeader.className = "sub-header client-sub";
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -317,7 +314,7 @@
                             <h3 style="margin: 0; color: ${conf.color};">${conf.name}</h3>
                         </div>
                         <div class="stand-compact-info" id="compact-info-${stand}">
-                            <div class="label">Numero Servito</div>
+                            <div class="label">Numero Chiamato</div>
                             <div class="value" id="client-${stand}-called-compact">0</div>
                         </div>
                     </div>
@@ -460,59 +457,3 @@
                     return data;
                 }, () => {
                     localStorage.removeItem(`my_ticket_${stand}`);
-                    clientData[stand].ticket = null;
-                    updateClientStandUI(stand);
-                    checkGlobalAlerts();
-                });
-            }
-        }
-
-        function checkGlobalAlerts() {
-            let flashStand = null;
-            Object.keys(standsConfig).forEach(s => {
-                if (clientData[s].ticket !== null && Number(clientData[s].ticket) === Number(clientData[s].called)) {
-                    flashStand = s;
-                }
-            });
-
-            if (flashStand) {
-                document.body.className = `flashing-${flashStand}`;
-                if (!alertInterval) alertInterval = setInterval(triggerDrinnn, 1500);
-            } else {
-                document.body.className = "";
-                if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
-            }
-        }
-
-        function triggerDrinnn() {
-            if ("vibrate" in navigator) {
-                try { navigator.vibrate([300, 100, 300, 100, 300, 100]); } catch (e) {}
-            }
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) {
-                    const ctx = new AudioContext();
-                    let delay = 0;
-                    for (let i = 0; i < 5; i++) {
-                        playTone(ctx, 1800, delay, 0.08);
-                        playTone(ctx, 2200, delay + 0.08, 0.08);
-                        delay += 0.16;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        function playTone(ctx, freq, start, dur) {
-            const osc = ctx.createOscillator(), gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(ctx.currentTime + start);
-            osc.stop(ctx.currentTime + start + dur);
-        }
-    </script>
-</body>
-</html>
