@@ -35,6 +35,29 @@
             font-size: 1.2rem;
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+        .header-logo {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            vertical-align: middle;
+        }
+        .version-tag {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: normal;
         }
         .sub-header {
             color: white;
@@ -149,7 +172,11 @@
 </head>
 <body>
 
-    <header id="header-title">SANTA GALLA in FESTA!</header>
+    <header id="header-container">
+        <img src="logo_festa_01.png" class="header-logo" alt="Logo" onerror="this.style.display='none'">
+        <span id="header-title-text">SANTA GALLA in FESTA!</span>
+        <span class="version-tag">v-21</span>
+    </header>
     <div id="sub-header-title" class="sub-header hidden">SELEZIONA STAND</div>
 
     <div class="container">
@@ -193,7 +220,6 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Ordine richiesto: Panini, Arrosticini, Crepes
         const standsConfig = {
             panini: { name: 'Panini', color: 'var(--brown)', img: 'panini_01.png' },
             arrosticini: { name: 'Arrosticini', color: 'var(--green)', img: 'arrosticini_01.png' },
@@ -232,7 +258,7 @@
             const conf = standsConfig[currentStand];
             subHeader.innerHTML = `MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'">`;
             subHeader.className = "sub-header master-sub";
-            document.getElementById('header-title').innerText = `SANTA GALLA in FESTA! - MASTER`;
+            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA! - MASTER`;
 
             db.ref(`queues/${currentStand}`).on('value', snapshot => {
                 const data = snapshot.val() || { current: 0, lastTicket: 0 };
@@ -268,7 +294,7 @@
             subHeader.classList.remove('hidden');
             subHeader.innerText = `AREA CLIENTE - SELEZIONE CODE`;
             subHeader.className = "sub-header client-sub";
-            document.getElementById('header-title').innerText = `SANTA GALLA in FESTA!`;
+            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
 
             const hubContainer = document.getElementById('view-client-hub');
             hubContainer.innerHTML = '';
@@ -360,13 +386,12 @@
             const aheadDisplay = document.getElementById(`${stand}-people-ahead`);
             const collapseContainer = document.getElementById(`${stand}-collapse-container`);
 
-            // Se l'utente ha un ticket attivo, espandiamo automaticamente la sezione per farglielo vedere
             if (ticket !== null && !isNaN(ticket)) {
                 clientData[stand].expanded = true;
                 renderStandExpansion(stand);
-                if (collapseContainer) collapseContainer.classList.add('hidden'); // Nasconde il tasto chiudi se ha il ticket attivo
+                if (collapseContainer) collapseContainer.classList.add('hidden');
             } else {
-                if (collapseContainer) collapseContainer.classList.remove('hidden'); // Mostra il tasto chiudi se non ha ticket
+                if (collapseContainer) collapseContainer.classList.remove('hidden');
             }
 
             if (ticket !== null && !isNaN(ticket)) {
