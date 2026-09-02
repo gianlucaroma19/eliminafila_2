@@ -64,12 +64,13 @@
         .card {
             background: #ffffff;
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px 20px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             width: 100%;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             box-sizing: border-box;
+            transition: all 0.3s ease;
         }
         .number-display {
             font-size: 3rem;
@@ -122,12 +123,28 @@
         }
         .stand-card {
             border-left: 6px solid #ccc;
-            margin-bottom: 15px;
             text-align: left;
+            cursor: pointer;
         }
-        .stand-card.crepes { border-left-color: var(--orange); }
-        .stand-card.arrosticini { border-left-color: var(--green); }
         .stand-card.panini { border-left-color: var(--brown); }
+        .stand-card.arrosticini { border-left-color: var(--green); }
+        .stand-card.crepes { border-left-color: var(--orange); }
+
+        .stand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stand-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .stand-compact-info {
+            text-align: right;
+        }
+        .stand-compact-info .label { font-size: 0.75rem; margin-bottom: 2px; }
+        .stand-compact-info .value { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -149,7 +166,7 @@
         </div>
 
         <!-- VISTA MASTER -->
-        <div id="view-master" class="card hidden">
+        <div id="view-master" class="card hidden" style="cursor: default;">
             <div class="label">Numero Attuale in Servizio</div>
             <div class="number-display" id="master-current">0</div>
             <div class="label" style="margin-top: 15px;">Persone in Attesa</div>
@@ -176,17 +193,18 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Ordine richiesto: Panini, Arrosticini, Crepes
         const standsConfig = {
-            panini: { name: 'Stand Panini', color: 'var(--brown)', img: 'panini_01.png' },
-            arrosticini: { name: 'Stand Arrosticini', color: 'var(--green)', img: 'arrosticini_01.png' },
-            crepes: { name: 'Stand Crepes', color: 'var(--orange)', img: 'crepes_01.png' }
+            panini: { name: 'Panini', color: 'var(--brown)', img: 'panini_01.png' },
+            arrosticini: { name: 'Arrosticini', color: 'var(--green)', img: 'arrosticini_01.png' },
+            crepes: { name: 'Crepes', color: 'var(--orange)', img: 'crepes_01.png' }
         };
 
         let currentRole = null, currentStand = null, alertInterval = null;
         let clientData = {
-            panini: { ticket: null, called: 0 },
-            arrosticini: { ticket: null, called: 0 },
-            crepes: { ticket: null, called: 0 }
+            panini: { ticket: null, called: 0, expanded: false },
+            arrosticini: { ticket: null, called: 0, expanded: false },
+            crepes: { ticket: null, called: 0, expanded: false }
         };
 
         function goToUrl(role, stand = '') {
@@ -261,26 +279,41 @@
                 const conf = standsConfig[stand];
                 const card = document.createElement('div');
                 card.className = `card stand-card ${stand}`;
+                card.id = `card-${stand}`;
+                
                 card.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <h3 style="margin: 0; color: ${conf.color};">${conf.name}</h3>
-                        <img src="${conf.img}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;" alt="${stand}" onerror="this.style.display='none'">
+                    <div class="stand-header" onclick="toggleStand('${stand}')">
+                        <div class="stand-header-left">
+                            <img src="${conf.img}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;" alt="${stand}" onerror="this.style.display='none'">
+                            <h3 style="margin: 0; color: ${conf.color};">${conf.name}</h3>
+                        </div>
+                        <div class="stand-compact-info">
+                            <div class="label">Numero Servito</div>
+                            <div class="value" id="client-${stand}-called-compact">0</div>
+                        </div>
                     </div>
-                    <div style="display: flex; justify-content: space-around; margin: 15px 0; text-align: center;">
-                        <div><div class="label">Chiamato</div><div style="font-size: 1.8rem; font-weight: bold; color: var(--primary);" id="client-${stand}-called">0</div></div>
-                        <div><div class="label">Il tuo numero</div><div style="font-size: 1.8rem; font-weight: bold; color: ${conf.color};" id="client-${stand}-myticket">-</div></div>
-                    </div>
-                    <div id="${stand}-noticket-section">
-                        <button class="btn" style="background-color: ${conf.color};" onclick="takeTicket('${stand}')">Prendi Numeretto</button>
-                    </div>
-                    <div id="${stand}-waiting-section" class="hidden" style="text-align: center; margin-top: 10px;">
-                        <div class="label">Persone prima di te</div>
-                        <div style="font-size: 1.4rem; font-weight: bold; color: ${conf.color};" id="${stand}-people-ahead">-</div>
-                        <button class="btn btn-danger" onclick="abandonQueue('${stand}')" style="background-color: #64748b; font-size: 0.8rem; padding: 6px; margin-top: 8px;">Annulla / Abbandona</button>
-                    </div>
-                    <div id="${stand}-turn-section" class="hidden" style="text-align: center; margin-top: 10px; background: #fef08a; padding: 10px; border-radius: 6px;">
-                        <p style="color: #b45309; font-weight: bold; margin: 0 0 8px 0;">È IL TUO TURNO!</p>
-                        <button class="btn btn-success" onclick="confirmArrival('${stand}')">Conferma Arrivo</button>
+                    
+                    <div id="${stand}-expanded-content" class="hidden" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <div style="display: flex; justify-content: space-around; margin: 10px 0; text-align: center;">
+                            <div><div class="label">Chiamato</div><div style="font-size: 1.8rem; font-weight: bold; color: var(--primary);" id="client-${stand}-called">0</div></div>
+                            <div><div class="label">Il tuo numero</div><div style="font-size: 1.8rem; font-weight: bold; color: ${conf.color};" id="client-${stand}-myticket">-</div></div>
+                        </div>
+                        <div id="${stand}-noticket-section">
+                            <button class="btn" style="background-color: ${conf.color};" onclick="event.stopPropagation(); takeTicket('${stand}')">Prendi Numeretto</button>
+                        </div>
+                        <div id="${stand}-waiting-section" class="hidden" style="text-align: center; margin-top: 10px;">
+                            <div class="label">Persone prima di te</div>
+                            <div style="font-size: 1.4rem; font-weight: bold; color: ${conf.color};" id="${stand}-people-ahead">-</div>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); abandonQueue('${stand}')" style="background-color: #64748b; font-size: 0.8rem; padding: 6px; margin-top: 8px;">Annulla / Abbandona</button>
+                        </div>
+                        <div id="${stand}-turn-section" class="hidden" style="text-align: center; margin-top: 10px; background: #fef08a; padding: 10px; border-radius: 6px;">
+                            <p style="color: #b45309; font-weight: bold; margin: 0 0 8px 0;">È IL TUO TURNO!</p>
+                            <button class="btn btn-success" onclick="event.stopPropagation(); confirmArrival('${stand}')">Conferma Arrivo</button>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 15px;" id="${stand}-collapse-container">
+                            <button class="btn" style="background-color: #64748b; font-size: 0.8rem; padding: 6px 12px; width: auto;" onclick="event.stopPropagation(); collapseStand('${stand}')">▲ Chiudi sezione</button>
+                        </div>
                     </div>
                 `;
                 hubContainer.appendChild(card);
@@ -289,10 +322,30 @@
                     const data = snapshot.val() || { current: 0, lastTicket: 0 };
                     clientData[stand].called = data.current || 0;
                     document.getElementById(`client-${stand}-called`).innerText = clientData[stand].called;
+                    document.getElementById(`client-${stand}-called-compact`).innerText = clientData[stand].called;
                     updateClientStandUI(stand);
                     checkGlobalAlerts();
                 });
             });
+        }
+
+        function toggleStand(stand) {
+            clientData[stand].expanded = !clientData[stand].expanded;
+            renderStandExpansion(stand);
+        }
+
+        function collapseStand(stand) {
+            clientData[stand].expanded = false;
+            renderStandExpansion(stand);
+        }
+
+        function renderStandExpansion(stand) {
+            const expandedContent = document.getElementById(`${stand}-expanded-content`);
+            if (clientData[stand].expanded) {
+                expandedContent.classList.remove('hidden');
+            } else {
+                expandedContent.classList.add('hidden');
+            }
         }
 
         function updateClientStandUI(stand) {
@@ -305,6 +358,16 @@
             const waitingSec = document.getElementById(`${stand}-waiting-section`);
             const turnSec = document.getElementById(`${stand}-turn-section`);
             const aheadDisplay = document.getElementById(`${stand}-people-ahead`);
+            const collapseContainer = document.getElementById(`${stand}-collapse-container`);
+
+            // Se l'utente ha un ticket attivo, espandiamo automaticamente la sezione per farglielo vedere
+            if (ticket !== null && !isNaN(ticket)) {
+                clientData[stand].expanded = true;
+                renderStandExpansion(stand);
+                if (collapseContainer) collapseContainer.classList.add('hidden'); // Nasconde il tasto chiudi se ha il ticket attivo
+            } else {
+                if (collapseContainer) collapseContainer.classList.remove('hidden'); // Mostra il tasto chiudi se non ha ticket
+            }
 
             if (ticket !== null && !isNaN(ticket)) {
                 ticketDisplay.innerText = ticket;
