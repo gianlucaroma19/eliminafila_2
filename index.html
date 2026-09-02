@@ -457,3 +457,59 @@
                     return data;
                 }, () => {
                     localStorage.removeItem(`my_ticket_${stand}`);
+                    clientData[stand].ticket = null;
+                    updateClientStandUI(stand);
+                    checkGlobalAlerts();
+                });
+            }
+        }
+
+        function checkGlobalAlerts() {
+            let flashStand = null;
+            Object.keys(standsConfig).forEach(s => {
+                if (clientData[s].ticket !== null && Number(clientData[s].ticket) === Number(clientData[s].called)) {
+                    flashStand = s;
+                }
+            });
+
+            if (flashStand) {
+                document.body.className = `flashing-${flashStand}`;
+                if (!alertInterval) alertInterval = setInterval(triggerDrinnn, 1500);
+            } else {
+                document.body.className = "";
+                if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
+            }
+        }
+
+        function triggerDrinnn() {
+            if ("vibrate" in navigator) {
+                try { navigator.vibrate([300, 100, 300, 100, 300, 100]); } catch (e) {}
+            }
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    let delay = 0;
+                    for (let i = 0; i < 5; i++) {
+                        playTone(ctx, 1800, delay, 0.08);
+                        playTone(ctx, 2200, delay + 0.08, 0.08);
+                        delay += 0.16;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function playTone(ctx, freq, start, dur) {
+            const osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + dur);
+        }
+    </script>
+</body>
+</html>
