@@ -255,7 +255,7 @@
             const conf = standsConfig[currentStand];
             subHeader.innerHTML = `
                 <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
-                <span class="version-tag">v-22</span>
+                <span class="version-tag">v-23</span>
             `;
             subHeader.className = `sub-header master-${currentStand}`;
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -294,7 +294,7 @@
             subHeader.classList.remove('hidden');
             subHeader.innerHTML = `
                 <span>AREA CLIENTE - SELEZIONE CODE</span>
-                <span class="version-tag">v-22</span>
+                <span class="version-tag">v-23</span>
             `;
             subHeader.className = "sub-header client-sub";
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -316,7 +316,7 @@
                             <img src="${conf.img}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;" alt="${stand}" onerror="this.style.display='none'">
                             <h3 style="margin: 0; color: ${conf.color};">${conf.name}</h3>
                         </div>
-                        <div class="stand-compact-info">
+                        <div class="stand-compact-info" id="compact-info-${stand}">
                             <div class="label">Numero Servito</div>
                             <div class="value" id="client-${stand}-called-compact">0</div>
                         </div>
@@ -370,10 +370,14 @@
 
         function renderStandExpansion(stand) {
             const expandedContent = document.getElementById(`${stand}-expanded-content`);
+            const compactInfo = document.getElementById(`compact-info-${stand}`);
+            
             if (clientData[stand].expanded) {
                 expandedContent.classList.remove('hidden');
+                compactInfo.classList.add('hidden');
             } else {
                 expandedContent.classList.add('hidden');
+                compactInfo.classList.remove('hidden');
             }
         }
 
