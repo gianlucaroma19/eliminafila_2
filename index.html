@@ -43,6 +43,10 @@
             font-size: 1rem;
             font-weight: bold;
             letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         .sub-header.master-sub { background-color: var(--secondary); }
         .sub-header.client-sub { background-color: var(--primary); }
@@ -204,9 +208,12 @@
         function setupMasterView() {
             document.getElementById('view-selector').classList.add('hidden');
             document.getElementById('view-master').classList.remove('hidden');
-            document.getElementById('sub-header-title').classList.remove('hidden');
-            document.getElementById('sub-header-title').innerText = `MASTER SPORTELLO: ${currentStand.toUpperCase()}`;
-            document.getElementById('sub-header-title').className = "sub-header master-sub";
+            const subHeader = document.getElementById('sub-header-title');
+            subHeader.classList.remove('hidden');
+            
+            const conf = standsConfig[currentStand];
+            subHeader.innerHTML = `MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'">`;
+            subHeader.className = "sub-header master-sub";
             document.getElementById('header-title').innerText = `SANTA GALLA in FESTA! - MASTER`;
 
             db.ref(`queues/${currentStand}`).on('value', snapshot => {
@@ -239,9 +246,10 @@
         function setupClientHubView() {
             document.getElementById('view-selector').classList.add('hidden');
             document.getElementById('view-client-hub').classList.remove('hidden');
-            document.getElementById('sub-header-title').classList.remove('hidden');
-            document.getElementById('sub-header-title').innerText = `AREA CLIENTE - SELEZIONE CODE`;
-            document.getElementById('sub-header-title').className = "sub-header client-sub";
+            const subHeader = document.getElementById('sub-header-title');
+            subHeader.classList.remove('hidden');
+            subHeader.innerText = `AREA CLIENTE - SELEZIONE CODE`;
+            subHeader.className = "sub-header client-sub";
             document.getElementById('header-title').innerText = `SANTA GALLA in FESTA!`;
 
             const hubContainer = document.getElementById('view-client-hub');
