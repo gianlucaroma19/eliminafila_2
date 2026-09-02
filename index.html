@@ -39,7 +39,6 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            position: relative;
         }
         .header-logo {
             width: 35px;
@@ -48,31 +47,30 @@
             object-fit: cover;
             vertical-align: middle;
         }
-        .version-tag {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-weight: normal;
-        }
         .sub-header {
             color: white;
-            padding: 8px;
+            padding: 8px 15px;
             text-align: center;
             font-size: 1rem;
             font-weight: bold;
             letter-spacing: 1px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: space-between;
         }
         .sub-header.master-sub { background-color: var(--secondary); }
         .sub-header.client-sub { background-color: var(--primary); }
+        .sub-header.master-panini { background-color: var(--brown); }
+        .sub-header.master-arrosticini { background-color: var(--green); }
+        .sub-header.master-crepes { background-color: var(--orange); }
+
+        .version-tag {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
         .container {
             flex: 1;
             max-width: 500px;
@@ -175,9 +173,8 @@
     <header id="header-container">
         <img src="logo_festa_01.png" class="header-logo" alt="Logo" onerror="this.style.display='none'">
         <span id="header-title-text">SANTA GALLA in FESTA!</span>
-        <span class="version-tag">v-21</span>
     </header>
-    <div id="sub-header-title" class="sub-header hidden">SELEZIONA STAND</div>
+    <div id="sub-header-title" class="sub-header hidden"></div>
 
     <div class="container">
         <!-- SELETTORE INIZIALE -->
@@ -256,9 +253,12 @@
             subHeader.classList.remove('hidden');
             
             const conf = standsConfig[currentStand];
-            subHeader.innerHTML = `MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'">`;
-            subHeader.className = "sub-header master-sub";
-            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA! - MASTER`;
+            subHeader.innerHTML = `
+                <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
+                <span class="version-tag">v-22</span>
+            `;
+            subHeader.className = `sub-header master-${currentStand}`;
+            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
 
             db.ref(`queues/${currentStand}`).on('value', snapshot => {
                 const data = snapshot.val() || { current: 0, lastTicket: 0 };
@@ -292,7 +292,10 @@
             document.getElementById('view-client-hub').classList.remove('hidden');
             const subHeader = document.getElementById('sub-header-title');
             subHeader.classList.remove('hidden');
-            subHeader.innerText = `AREA CLIENTE - SELEZIONE CODE`;
+            subHeader.innerHTML = `
+                <span>AREA CLIENTE - SELEZIONE CODE</span>
+                <span class="version-tag">v-22</span>
+            `;
             subHeader.className = "sub-header client-sub";
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
 
