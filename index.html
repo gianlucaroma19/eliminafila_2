@@ -189,7 +189,7 @@
         </div>
 
         <div id="view-master" class="card hidden" style="cursor: default;">
-            <div class="label">Numero Attuale in Servizio</div>
+            <div class="label">Numero Chiamato</div>
             <div class="number-display" id="master-current">0</div>
             <div class="label" style="margin-top: 15px;">Persone in Attesa</div>
             <div style="font-size: 2rem; font-weight: bold; color: var(--secondary);" id="master-waiting">0</div>
@@ -252,7 +252,7 @@
             const conf = standsConfig[currentStand];
             subHeader.innerHTML = `
                 <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
-                <span class="version-tag">v-25</span>
+                <span class="version-tag">v-26</span>
             `;
             subHeader.className = `sub-header master-${currentStand}`;
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -291,7 +291,7 @@
             subHeader.classList.remove('hidden');
             subHeader.innerHTML = `
                 <span>AREA CLIENTE - SELEZIONE CODE</span>
-                <span class="version-tag">v-25</span>
+                <span class="version-tag">v-26</span>
             `;
             subHeader.className = "sub-header client-sub";
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
