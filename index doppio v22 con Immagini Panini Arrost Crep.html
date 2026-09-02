@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANTA GALLA in FESTA! - Eliminafila Multi-Stand</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --orange: #f97316;
+            --green: #15803d;
+            --brown: #b45309;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header-logo {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            vertical-align: middle;
+        }
+        .sub-header {
+            color: white;
+            padding: 8px 15px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sub-header.master-sub { background-color: var(--secondary); }
+        .sub-header.client-sub { background-color: var(--primary); }
+        .sub-header.master-panini { background-color: var(--brown); }
+        .sub-header.master-arrosticini { background-color: var(--green); }
+        .sub-header.master-crepes { background-color: var(--orange); }
+
+        .version-tag {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
+        .container {
+            flex: 1;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            width: 100%;
+            text-align: center;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        .number-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 5px 0;
+        }
+        .label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+        }
+        .btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        
+        .flashing-crepes { animation: pulse-flash-crepes 0.8s infinite alternate; }
+        @keyframes pulse-flash-crepes { 0% { background-color: var(--bg); } 100% { background-color: #ef4444; } }
+
+        .flashing-arrosticini { animation: pulse-flash-arrosticini 0.8s infinite alternate; }
+        @keyframes pulse-flash-arrosticini { 0% { background-color: var(--bg); } 100% { background-color: #166534; } }
+
+        .flashing-panini { animation: pulse-flash-panini 0.8s infinite alternate; }
+        @keyframes pulse-flash-panini { 0% { background-color: var(--bg); } 100% { background-color: #d97706; } }
+
+        .hidden { display: none !important; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .stand-card {
+            border-left: 6px solid #ccc;
+            text-align: left;
+            cursor: pointer;
+        }
+        .stand-card.panini { border-left-color: var(--brown); }
+        .stand-card.arrosticini { border-left-color: var(--green); }
+        .stand-card.crepes { border-left-color: var(--orange); }
+
+        .stand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stand-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .stand-compact-info {
+            text-align: right;
+        }
+        .stand-compact-info .label { font-size: 0.75rem; margin-bottom: 2px; }
+        .stand-compact-info .value { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <header id="header-container">
+        <img src="logo_festa_01.png" class="header-logo" alt="Logo" onerror="this.style.display='none'">
+        <span id="header-title-text">SANTA GALLA in FESTA!</span>
+    </header>
+    <div id="sub-header-title" class="sub-header hidden"></div>
+
+    <div class="container">
+        <!-- SELETTORE INIZIALE -->
+        <div id="view-selector" class="card hidden">
+            <h2>Seleziona Modalità</h2>
+            <p>Scegli il ruolo di accesso:</p>
+            <button class="btn" style="background-color: var(--orange);" onclick="goToUrl('client')">📱 Area Cliente (QR Unico)</button>
+            <hr style="margin: 20px 0; border:0; border-top:1px solid #e2e8f0;">
+            <div style="text-align: left; font-weight: bold; color: var(--primary);">Accesso Master (Gestione Sportello)</div>
+            <button class="btn" style="background-color: var(--brown); font-size: 0.9rem; padding: 10px; margin-top: 5px;" onclick="goToUrl('master', 'panini')">Master Sportello Panini</button>
+            <button class="btn" style="background-color: var(--green); font-size: 0.9rem; padding: 10px; margin-top: 5px;" onclick="goToUrl('master', 'arrosticini')">Master Sportello Arrosticini</button>
+            <button class="btn" style="background-color: var(--orange); font-size: 0.9rem; padding: 10px; margin-top: 5px;" onclick="goToUrl('master', 'crepes')">Master Sportello Crepes</button>
+        </div>
+
+        <!-- VISTA MASTER -->
+        <div id="view-master" class="card hidden" style="cursor: default;">
+            <div class="label">Numero Attuale in Servizio</div>
+            <div class="number-display" id="master-current">0</div>
+            <div class="label" style="margin-top: 15px;">Persone in Attesa</div>
+            <div style="font-size: 2rem; font-weight: bold; color: var(--secondary);" id="master-waiting">0</div>
+
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="updateMaster(-1)">- Ticket</button>
+                <button class="btn btn-success" onclick="updateMaster(1)">+ Ticket</button>
+            </div>
+
+            <hr style="margin: 20px 0; border:0; border-top:1px solid #e2e8f0;">
+            <div class="label">Impostazione Rapida</div>
+            <input type="number" id="custom-number" placeholder="Inserisci numero...">
+            <button class="btn" onclick="setCustomNumber()">Imposta Numero</button>
+            <button class="btn btn-danger" onclick="resetQueue()" style="margin-top: 10px; background-color: #64748b;">Azzera Contatore</button>
+        </div>
+
+        <!-- VISTA CLIENTE HUB (Generata Dinamicamente) -->
+        <div id="view-client-hub" class="hidden" style="width: 100%;"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://mioeliminafila-default-rtdb.europe-west1.firebasedatabase.app" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const standsConfig = {
+            panini: { name: 'Panini', color: 'var(--brown)', img: 'panini_01.png' },
+            arrosticini: { name: 'Arrosticini', color: 'var(--green)', img: 'arrosticini_01.png' },
+            crepes: { name: 'Crepes', color: 'var(--orange)', img: 'crepes_01.png' }
+        };
+
+        let currentRole = null, currentStand = null, alertInterval = null;
+        let clientData = {
+            panini: { ticket: null, called: 0, expanded: false },
+            arrosticini: { ticket: null, called: 0, expanded: false },
+            crepes: { ticket: null, called: 0, expanded: false }
+        };
+
+        function goToUrl(role, stand = '') {
+            window.location.href = `?role=${role}${stand ? '&stand=' + stand : ''}`;
+        }
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentRole = urlParams.get('role');
+            currentStand = urlParams.get('stand');
+
+            if (currentRole === 'master' && standsConfig[currentStand]) {
+                setupMasterView();
+            } else {
+                setupClientHubView();
+            }
+        };
+
+        function setupMasterView() {
+            document.getElementById('view-selector').classList.add('hidden');
+            document.getElementById('view-master').classList.remove('hidden');
+            const subHeader = document.getElementById('sub-header-title');
+            subHeader.classList.remove('hidden');
+            
+            const conf = standsConfig[currentStand];
+            subHeader.innerHTML = `
+                <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
+                <span class="version-tag">v-22</span>
+            `;
+            subHeader.className = `sub-header master-${currentStand}`;
+            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
+
+            db.ref(`queues/${currentStand}`).on('value', snapshot => {
+                const data = snapshot.val() || { current: 0, lastTicket: 0 };
+                document.getElementById('master-current').innerText = data.current || 0;
+                document.getElementById('master-waiting').innerText = Math.max(0, (data.lastTicket || 0) - (data.current || 0));
+            });
+        }
+
+        function updateMaster(change) {
+            db.ref(`queues/${currentStand}/current`).transaction(c => Math.max(0, (c || 0) + change));
+        }
+
+        function setCustomNumber() {
+            let val = parseInt(document.getElementById('custom-number').value);
+            if (!isNaN(val) && val >= 0) {
+                db.ref(`queues/${currentStand}/current`).set(val);
+                document.getElementById('custom-number').value = '';
+            }
+        }
+
+        function resetQueue() {
+            if(confirm(`Vuoi azzerare il contatore per lo stand ${currentStand}?`)) {
+                db.ref(`queues/${currentStand}`).set({ current: 0, lastTicket: 0 });
+                localStorage.removeItem(`my_ticket_${currentStand}`);
+                location.reload();
+            }
+        }
+
+        function setupClientHubView() {
+            document.getElementById('view-selector').classList.add('hidden');
+            document.getElementById('view-client-hub').classList.remove('hidden');
+            const subHeader = document.getElementById('sub-header-title');
+            subHeader.classList.remove('hidden');
+            subHeader.innerHTML = `
+                <span>AREA CLIENTE - SELEZIONE CODE</span>
+                <span class="version-tag">v-22</span>
+            `;
+            subHeader.className = "sub-header client-sub";
+            document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
+
+            const hubContainer = document.getElementById('view-client-hub');
+            hubContainer.innerHTML = '';
+
+            Object.keys(standsConfig).forEach(stand => {
+                clientData[stand].ticket = localStorage.getItem(`my_ticket_${stand}`) ? parseInt(localStorage.getItem(`my_ticket_${stand}`)) : null;
+                
+                const conf = standsConfig[stand];
+                const card = document.createElement('div');
+                card.className = `card stand-card ${stand}`;
+                card.id = `card-${stand}`;
+                
+                card.innerHTML = `
+                    <div class="stand-header" onclick="toggleStand('${stand}')">
+                        <div class="stand-header-left">
+                            <img src="${conf.img}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;" alt="${stand}" onerror="this.style.display='none'">
+                            <h3 style="margin: 0; color: ${conf.color};">${conf.name}</h3>
+                        </div>
+                        <div class="stand-compact-info">
+                            <div class="label">Numero Servito</div>
+                            <div class="value" id="client-${stand}-called-compact">0</div>
+                        </div>
+                    </div>
+                    
+                    <div id="${stand}-expanded-content" class="hidden" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <div style="display: flex; justify-content: space-around; margin: 10px 0; text-align: center;">
+                            <div><div class="label">Chiamato</div><div style="font-size: 1.8rem; font-weight: bold; color: var(--primary);" id="client-${stand}-called">0</div></div>
+                            <div><div class="label">Il tuo numero</div><div style="font-size: 1.8rem; font-weight: bold; color: ${conf.color};" id="client-${stand}-myticket">-</div></div>
+                        </div>
+                        <div id="${stand}-noticket-section">
+                            <button class="btn" style="background-color: ${conf.color};" onclick="event.stopPropagation(); takeTicket('${stand}')">Prendi Numeretto</button>
+                        </div>
+                        <div id="${stand}-waiting-section" class="hidden" style="text-align: center; margin-top: 10px;">
+                            <div class="label">Persone prima di te</div>
+                            <div style="font-size: 1.4rem; font-weight: bold; color: ${conf.color};" id="${stand}-people-ahead">-</div>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); abandonQueue('${stand}')" style="background-color: #64748b; font-size: 0.8rem; padding: 6px; margin-top: 8px;">Annulla / Abbandona</button>
+                        </div>
+                        <div id="${stand}-turn-section" class="hidden" style="text-align: center; margin-top: 10px; background: #fef08a; padding: 10px; border-radius: 6px;">
+                            <p style="color: #b45309; font-weight: bold; margin: 0 0 8px 0;">È IL TUO TURNO!</p>
+                            <button class="btn btn-success" onclick="event.stopPropagation(); confirmArrival('${stand}')">Conferma Arrivo</button>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 15px;" id="${stand}-collapse-container">
+                            <button class="btn" style="background-color: #64748b; font-size: 0.8rem; padding: 6px 12px; width: auto;" onclick="event.stopPropagation(); collapseStand('${stand}')">▲ Chiudi sezione</button>
+                        </div>
+                    </div>
+                `;
+                hubContainer.appendChild(card);
+
+                db.ref(`queues/${stand}`).on('value', snapshot => {
+                    const data = snapshot.val() || { current: 0, lastTicket: 0 };
+                    clientData[stand].called = data.current || 0;
+                    document.getElementById(`client-${stand}-called`).innerText = clientData[stand].called;
+                    document.getElementById(`client-${stand}-called-compact`).innerText = clientData[stand].called;
+                    updateClientStandUI(stand);
+                    checkGlobalAlerts();
+                });
+            });
+        }
+
+        function toggleStand(stand) {
+            clientData[stand].expanded = !clientData[stand].expanded;
+            renderStandExpansion(stand);
+        }
+
+        function collapseStand(stand) {
+            clientData[stand].expanded = false;
+            renderStandExpansion(stand);
+        }
+
+        function renderStandExpansion(stand) {
+            const expandedContent = document.getElementById(`${stand}-expanded-content`);
+            if (clientData[stand].expanded) {
+                expandedContent.classList.remove('hidden');
+            } else {
+                expandedContent.classList.add('hidden');
+            }
+        }
+
+        function updateClientStandUI(stand) {
+            const ticket = clientData[stand].ticket;
+            const called = clientData[stand].called;
+            const conf = standsConfig[stand];
+
+            const ticketDisplay = document.getElementById(`client-${stand}-myticket`);
+            const noTicketSec = document.getElementById(`${stand}-noticket-section`);
+            const waitingSec = document.getElementById(`${stand}-waiting-section`);
+            const turnSec = document.getElementById(`${stand}-turn-section`);
+            const aheadDisplay = document.getElementById(`${stand}-people-ahead`);
+            const collapseContainer = document.getElementById(`${stand}-collapse-container`);
+
+            if (ticket !== null && !isNaN(ticket)) {
+                clientData[stand].expanded = true;
+                renderStandExpansion(stand);
+                if (collapseContainer) collapseContainer.classList.add('hidden');
+            } else {
+                if (collapseContainer) collapseContainer.classList.remove('hidden');
+            }
+
+            if (ticket !== null && !isNaN(ticket)) {
+                ticketDisplay.innerText = ticket;
+                noTicketSec.classList.add('hidden');
+
+                if (ticket < called) {
+                    ticketDisplay.style.color = "var(--danger)";
+                    waitingSec.classList.add('hidden');
+                    turnSec.classList.add('hidden');
+                } else if (ticket === called) {
+                    ticketDisplay.style.color = "var(--success)";
+                    waitingSec.classList.add('hidden');
+                    turnSec.classList.remove('hidden');
+                } else {
+                    ticketDisplay.style.color = conf.color;
+                    waitingSec.classList.remove('hidden');
+                    turnSec.classList.add('hidden');
+                    aheadDisplay.innerText = Math.max(0, ticket - called);
+                }
+            } else {
+                ticketDisplay.innerText = "-";
+                ticketDisplay.style.color = "#64748b";
+                noTicketSec.classList.remove('hidden');
+                waitingSec.classList.add('hidden');
+                turnSec.classList.add('hidden');
+            }
+        }
+
+        function takeTicket(stand) {
+            db.ref(`queues/${stand}`).transaction(data => {
+                if (!data) data = { current: 0, lastTicket: 0 };
+                data.lastTicket = Math.max((data.current || 0) + 1, (data.lastTicket || 0) + 1);
+                return data;
+            }, (error, committed, snapshot) => {
+                if (committed) {
+                    let newT = snapshot.child('lastTicket').val();
+                    clientData[stand].ticket = newT;
+                    localStorage.setItem(`my_ticket_${stand}`, newT);
+                    updateClientStandUI(stand);
+                }
+            });
+        }
+
+        function confirmArrival(stand) {
+            localStorage.removeItem(`my_ticket_${stand}`);
+            clientData[stand].ticket = null;
+            updateClientStandUI(stand);
+            checkGlobalAlerts();
+            alert(`Hai confermato il turno per ${stand}!`);
+        }
+
+        function abandonQueue(stand) {
+            if (confirm(`Vuoi abbandonare la coda?`)) {
+                db.ref(`queues/${stand}`).transaction(data => {
+                    if (data && data.lastTicket > 0) {
+                        data.lastTicket = Math.max(data.current, data.lastTicket - 1);
+                    }
+                    return data;
+                }, () => {
+                    localStorage.removeItem(`my_ticket_${stand}`);
+                    clientData[stand].ticket = null;
+                    updateClientStandUI(stand);
+                    checkGlobalAlerts();
+                });
+            }
+        }
+
+        function checkGlobalAlerts() {
+            let flashStand = null;
+            Object.keys(standsConfig).forEach(s => {
+                if (clientData[s].ticket !== null && Number(clientData[s].ticket) === Number(clientData[s].called)) {
+                    flashStand = s;
+                }
+            });
+
+            if (flashStand) {
+                document.body.className = `flashing-${flashStand}`;
+                if (!alertInterval) alertInterval = setInterval(triggerDrinnn, 1500);
+            } else {
+                document.body.className = "";
+                if (alertInterval) { clearInterval(alertInterval); alertInterval = null; }
+            }
+        }
+
+        function triggerDrinnn() {
+            if ("vibrate" in navigator) {
+                try { navigator.vibrate([300, 100, 300, 100, 300, 100]); } catch (e) {}
+            }
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    let delay = 0;
+                    for (let i = 0; i < 5; i++) {
+                        playTone(ctx, 1800, delay, 0.08);
+                        playTone(ctx, 2200, delay + 0.08, 0.08);
+                        delay += 0.16;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function playTone(ctx, freq, start, dur) {
+            const osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + dur);
+        }
+    </script>
+</body>
+</html>
