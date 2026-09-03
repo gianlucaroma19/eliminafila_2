@@ -6,6 +6,7 @@
     <title>SANTA GALLA in FESTA! - Eliminafila Multi-Stand</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -210,9 +211,24 @@
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://mioeliminafila-default-rtdb.europe-west1.firebasedatabase.app" };
+        const firebaseConfig = { 
+            databaseURL: "https://mioeliminafila-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "mioeliminafila",
+            messagingSenderId: "INSERISCI_MESSAGING_SENDER_ID",
+            apiKey: "INSERISCI_API_KEY",
+            appId: "INSERISCI_APP_ID"
+        };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        
+        let messaging = null;
+        try {
+            if (firebase.messaging.isSupported()) {
+                messaging = firebase.messaging();
+            }
+        } catch (e) {
+            console.warn("Firebase Messaging non supportato su questo browser.", e);
+        }
 
         const standsConfig = {
             panini: { name: 'Panini', color: 'var(--brown)', img: 'panini_01.png' },
@@ -240,8 +256,27 @@
                 setupMasterView();
             } else {
                 setupClientHubView();
+                initPushNotifications();
             }
         };
+
+        async function initPushNotifications() {
+            if (!messaging) return;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await messaging.getToken({
+                        vapidKey: 'INSERISCI_VAPID_KEY_PUBBLICA'
+                    });
+                    if (token) {
+                        console.log("Token FCM ottenuto:", token);
+                        // Qui potrai salvare il token associato al ticket nel Database se desiderato
+                    }
+                }
+            } catch (error) {
+                console.error("Errore durante la configurazione delle notifiche push:", error);
+            }
+        }
 
         function setupMasterView() {
             document.getElementById('view-selector').classList.add('hidden');
@@ -252,7 +287,7 @@
             const conf = standsConfig[currentStand];
             subHeader.innerHTML = `
                 <span>MASTER - ${currentStand.toUpperCase()} <img src="${conf.img}" style="width: 25px; height: 25px; border-radius: 50%; object-fit: cover; vertical-align: middle;" alt="${currentStand}" onerror="this.style.display='none'"></span>
-                <span class="version-tag">v-26</span>
+                <span class="version-tag">v-27</span>
             `;
             subHeader.className = `sub-header master-${currentStand}`;
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -291,7 +326,7 @@
             subHeader.classList.remove('hidden');
             subHeader.innerHTML = `
                 <span>AREA CLIENTE - SELEZIONE CODE</span>
-                <span class="version-tag">v-26</span>
+                <span class="version-tag">v-27</span>
             `;
             subHeader.className = "sub-header client-sub";
             document.getElementById('header-title-text').innerText = `SANTA GALLA in FESTA!`;
@@ -427,7 +462,7 @@
 
         function takeTicket(stand) {
             db.ref(`queues/${stand}`).transaction(data => {
-                if (!data) data = { current: 0, lastTicket: 0 };
+                if (!data) data = { current: 0, lastTopic: 0, lastTicket: 0 };
                 data.lastTicket = Math.max((data.current || 0) + 1, (data.lastTicket || 0) + 1);
                 return data;
             }, (error, committed, snapshot) => {
